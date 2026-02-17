@@ -408,5 +408,6 @@ GPL-2.0 License - veja o arquivo LICENSE para detalhes
 - [Slack da Comunidade](https://wazuh.com/community/join-us-on-slack/)
 - [Google Groups](https://groups.google.com/forum/#!forum/wazuh)
 - [GitHub Issues](https://github.com/wazuh/wazuh-kubernetes/issues)
-#   w a z u h - k u b e r n e t e s - h e a l m  
+#   w a z u h - k u b e r n e t e s - h e a l m 
+ 
  
