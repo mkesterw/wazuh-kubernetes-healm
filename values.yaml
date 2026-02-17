@@ -5,10 +5,11 @@
 # Global settings
 global:
   # Namespace where Wazuh will be deployed
-  namespace: wazuh
+  # Leave empty to use the namespace from Helm installation (recommended for Rancher)
+  namespace: ""
   
-  # Create namespace resource (set to false if installing in existing namespace)
-  createNamespace: true
+  # Create namespace resource (set to false when using Rancher or existing namespace)
+  createNamespace: false
   
   # Storage class for persistent volumes
   storageClass: gp2

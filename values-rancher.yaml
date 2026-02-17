@@ -2,10 +2,10 @@
 # Use this when installing from Rancher UI or when resources already exist
 
 global:
-  # Use the namespace where you're installing (default in Rancher)
-  namespace: default
+  # Leave namespace empty to use the one selected in Rancher UI
+  namespace: ""
   
-  # Don't create namespace - it already exists
+  # Don't create namespace - Rancher manages this
   createNamespace: false
   
   # Use existing StorageClass - don't try to create it

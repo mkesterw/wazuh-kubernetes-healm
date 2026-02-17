@@ -66,7 +66,11 @@ Create the name of the service account to use
 Get the namespace
 */}}
 {{- define "wazuh.namespace" -}}
-{{- default .Release.Namespace .Values.global.namespace }}
+{{- if .Values.global.namespace }}
+{{- .Values.global.namespace }}
+{{- else }}
+{{- .Release.Namespace }}
+{{- end }}
 {{- end }}
 
 {{/*

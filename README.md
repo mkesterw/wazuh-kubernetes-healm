@@ -1,31 +1,38 @@
-# Wazuh Kubernetes Helm
+# Wazuh Helm Chart
 
-This repository contains Helm charts for deploying Wazuh in a Kubernetes cluster.
+Este Helm Chart permite a implantação do Wazuh - uma plataforma de segurança open source - em clusters Kubernetes.
 
-## Installation
+## 📋 Pré-requisitos
 
-To install the Wazuh module, use the following command:
+- Kubernetes 1.19+
+- Helm 3.0+
+- PV provisioner support no cluster
+- Storage Class configurado (ex: gp2 para AWS EKS)
+- Mínimo de 8GB de RAM disponível no cluster
+- Mínimo de 4 vCPUs
 
-```bash
-helm install my-release wazuh/wazuh
-```
+## 🚀 Instalação Rápida
 
-## Configuration
-
-Configure the Helm chart values in `values.yaml`. Here are some configuration options:
-
-- `replicaCount`: The number of Wazuh Pods.
-- `service.type`: The type of service (e.g., ClusterIP, LoadBalancer).
-
-## Troubleshooting
-
-If you run into issues, check the logs of the Wazuh Pods:
+### 1. Adicionar o repositório (se publicado)
 
 ```bash
-kubectl logs -f <pod-name>
+helm repo add wazuh https://wazuh.github.io/helm-charts
+helm repo update
 ```
 
-<<<<<<< HEAD
+### 2. Instalar o chart
+
+```bash
+# Instalação básica com valores padrão
+helm install wazuh wazuh/wazuh --namespace wazuh --create-namespace
+
+# Instalação com valores customizados
+helm install wazuh wazuh/wazuh \
+  --namespace wazuh \
+  --create-namespace \
+  --values custom-values.yaml
+```
+
 ### 3. Instalar localmente (desenvolvimento)
 
 ```bash
@@ -401,6 +408,3 @@ GPL-2.0 License - veja o arquivo LICENSE para detalhes
 - [Slack da Comunidade](https://wazuh.com/community/join-us-on-slack/)
 - [Google Groups](https://groups.google.com/forum/#!forum/wazuh)
 - [GitHub Issues](https://github.com/wazuh/wazuh-kubernetes/issues)
-=======
-For more information, please refer to the [Wazuh Documentation](https://documentation.wazuh.com/).
->>>>>>> 276274a296951461a7f77e448b1d4814c32c7bc5
