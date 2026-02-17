@@ -7,8 +7,14 @@ global:
   # Namespace where Wazuh will be deployed
   namespace: wazuh
   
+  # Create namespace resource (set to false if installing in existing namespace)
+  createNamespace: true
+  
   # Storage class for persistent volumes
   storageClass: gp2
+  
+  # Create StorageClass resource (set to false if it already exists in the cluster)
+  createStorageClass: false
   
   # Image pull secrets if using private registry
   imagePullSecrets: []

@@ -1,0 +1,125 @@
+# Values for Rancher deployment
+# Use this when installing from Rancher UI or when resources already exist
+
+global:
+  # Use the namespace where you're installing (default in Rancher)
+  namespace: default
+  
+  # Don't create namespace - it already exists
+  createNamespace: false
+  
+  # Use existing StorageClass - don't try to create it
+  storageClass: gp2
+  createStorageClass: false
+
+wazuhManager:
+  master:
+    service:
+      type: LoadBalancer
+      annotations:
+        # Uncomment for AWS EKS
+        # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    resources:
+      limits:
+        cpu: 800m
+        memory: 1Gi
+      requests:
+        cpu: 400m
+        memory: 512Mi
+    persistence:
+      enabled: true
+      size: 10Gi
+  
+  worker:
+    enabled: true
+    replicas: 2
+    service:
+      type: LoadBalancer
+      annotations:
+        # Uncomment for AWS EKS
+        # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    resources:
+      limits:
+        cpu: 800m
+        memory: 1Gi
+      requests:
+        cpu: 400m
+        memory: 512Mi
+    persistence:
+      enabled: true
+      size: 10Gi
+
+wazuhIndexer:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 2Gi
+  opensearchConfig:
+    javaOpts: "-Xms1g -Xmx1g"
+  persistence:
+    enabled: true
+    size: 50Gi
+
+wazuhDashboard:
+  replicas: 1
+  service:
+    type: LoadBalancer
+    annotations:
+      # Uncomment for AWS EKS with ACM certificate
+      # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      # service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/cert-id"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 768Mi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  ingress:
+    enabled: false
+    # Enable and configure if you prefer Ingress over LoadBalancer
+    # className: nginx
+    # hosts:
+    #   - host: wazuh.yourdomain.com
+    #     paths:
+    #       - path: /
+    #         pathType: Prefix
+
+# IMPORTANT: Change these default passwords!
+# Generate new passwords with: echo -n "YourPassword" | base64
+secrets:
+  wazuhApi:
+    username: "wazuh-wui"
+    password: "d2F6dWg="  # Change this! Default: wazuh
+  wazuhAuthd:
+    password: "cGFzc3dvcmQ="  # Change this! Default: password
+  wazuhCluster:
+    key: "YzM0OGUzZTJmNTZlNGY0MmE1YzQyZjE1Yjg3YTFiNzU="  # Change this!
+  dashboard:
+    username: "kibanaserver"
+    password: "a2liYW5hc2VydmVy"  # Change this! Default: kibanaserver
+  indexer:
+    username: "admin"
+    password: "U2VjcmV0UGFzc3dvcmQ="  # Change this! Default: SecretPassword
+
+# Certificate generation
+certificates:
+  # Set to true to auto-generate certificates (for testing only)
+  # For production, generate proper certificates and create secrets manually
+  generate: true
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC configuration
+rbac:
+  create: true
