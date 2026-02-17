@@ -1,12 +1,14 @@
 # Values for Rancher deployment
-# Use this when installing from Rancher UI or when resources already exist
+# CRITICAL: In Rancher UI Step 3, UNCHECK "Wait" option!
+# The installation works but Rancher's wait has issues with RBAC timing.
 
-# IMPORTANT INSTALLATION NOTES:
-# 1. In Rancher UI Step 3:
-#    - Check "Wait" option
-#    - Set Timeout to 900 (15 minutes, not 600!)
-# 2. Monitor installation: Workloads → Pods
-# 3. Wait 5-10 minutes for all pods to be Running
+# INSTALLATION INSTRUCTIONS:
+# Step 3 - Helm Options:
+# ☐ Wait                    ← UNCHECK THIS! Very important!
+# ☐ Execute chart hooks     ← UNCHECK THIS!
+# ☐ Apply custom resource definitions  ← UNCHECK THIS!
+# 
+# After install, monitor: Workloads → Pods (wait 5-10 minutes)
 
 global:
   # Leave namespace empty to use the one selected in Rancher UI
@@ -15,7 +17,7 @@ global:
   # Don't create namespace - Rancher manages this
   createNamespace: false
   
-  # Use existing StorageClass - don't try to create it
+  # Use existing StorageClass
   storageClass: gp2
   createStorageClass: false
 
