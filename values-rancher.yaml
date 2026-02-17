@@ -1,6 +1,13 @@
 # Values for Rancher deployment
 # Use this when installing from Rancher UI or when resources already exist
 
+# IMPORTANT INSTALLATION NOTES:
+# 1. In Rancher UI Step 3:
+#    - Check "Wait" option
+#    - Set Timeout to 900 (15 minutes, not 600!)
+# 2. Monitor installation: Workloads → Pods
+# 3. Wait 5-10 minutes for all pods to be Running
+
 global:
   # Leave namespace empty to use the one selected in Rancher UI
   namespace: ""

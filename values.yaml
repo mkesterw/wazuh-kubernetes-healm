@@ -312,12 +312,16 @@ certificates:
 
 # ServiceAccount configuration
 serviceAccount:
+  # Create service account (recommended)
   create: true
   annotations: {}
+  # Specify service account name (leave empty to auto-generate)
   name: ""
 
 # RBAC configuration
 rbac:
+  # Create RBAC resources (recommended for most installations)
+  # Set to false only if your cluster doesn't support RBAC or if manually managing permissions
   create: true
 
 # Network policies
