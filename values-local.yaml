@@ -1,0 +1,76 @@
+# Example values for local development (Minikube/Kind/k3s)
+# Save as: values-local.yaml
+
+global:
+  namespace: wazuh
+  storageClass: standard
+
+wazuhManager:
+  master:
+    service:
+      type: NodePort
+    resources:
+      limits:
+        cpu: 400m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    persistence:
+      size: 1Gi
+  
+  worker:
+    enabled: true
+    replicas: 1
+    service:
+      type: NodePort
+    resources:
+      limits:
+        cpu: 400m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    persistence:
+      size: 1Gi
+
+wazuhIndexer:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 1Gi
+  opensearchConfig:
+    javaOpts: "-Xms512m -Xmx512m"
+  persistence:
+    size: 5Gi
+
+wazuhDashboard:
+  service:
+    type: NodePort
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 150m
+      memory: 256Mi
+
+# Default passwords for development only
+secrets:
+  wazuhApi:
+    username: "wazuh-wui"
+    password: "d2F6dWg="  # wazuh
+  wazuhAuthd:
+    password: "cGFzc3dvcmQ="  # password
+  wazuhCluster:
+    key: "YzM0OGUzZTJmNTZlNGY0MmE1YzQyZjE1Yjg3YTFiNzU="
+  dashboard:
+    username: "kibanaserver"
+    password: "a2liYW5hc2VydmVy"  # kibanaserver
+  indexer:
+    username: "admin"
+    password: "U2VjcmV0UGFzc3dvcmQ="  # SecretPassword

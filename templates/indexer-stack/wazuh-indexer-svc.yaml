@@ -1,0 +1,47 @@
+{{- if .Values.wazuhIndexer.enabled }}
+---
+# Headless service for StatefulSet DNS
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-indexer
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.indexer.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "wazuh.indexer.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: 9200
+      targetPort: 9200
+      protocol: TCP
+    - name: transport
+      port: 9300
+      targetPort: 9300
+      protocol: TCP
+---
+# External service
+apiVersion: v1
+kind: Service
+metadata:
+  name: indexer
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.indexer.labels" . | nindent 4 }}
+  {{- with .Values.wazuhIndexer.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.wazuhIndexer.service.type }}
+  selector:
+    {{- include "wazuh.indexer.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.wazuhIndexer.service.port }}
+      targetPort: 9200
+      protocol: TCP
+{{- end }}

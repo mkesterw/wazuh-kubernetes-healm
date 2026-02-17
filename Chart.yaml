@@ -1,0 +1,32 @@
+apiVersion: v2
+name: wazuh
+description: A Helm chart for Wazuh - Open Source Security Platform
+type: application
+version: 4.14.1
+appVersion: "4.14.1"
+
+keywords:
+  - wazuh
+  - security
+  - monitoring
+  - siem
+  - compliance
+  - threat-detection
+
+home: https://wazuh.com
+sources:
+  - https://github.com/wazuh/wazuh-kubernetes
+  - https://github.com/wazuh/wazuh
+
+maintainers:
+  - name: Wazuh Team
+    email: info@wazuh.com
+    url: https://wazuh.com
+
+icon: https://wazuh.com/wp-content/uploads/2021/03/wazuh-logo.png
+
+dependencies: []
+
+annotations:
+  category: Security
+  licenses: GPL-2.0

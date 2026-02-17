@@ -1,0 +1,204 @@
+{{- if .Values.wazuhManager.enabled }}
+apiVersion: {{ include "wazuh.statefulset.apiVersion" . }}
+kind: StatefulSet
+metadata:
+  name: wazuh-manager-master
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.manager.master.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.wazuhManager.master.replicas }}
+  serviceName: wazuh-cluster
+  selector:
+    matchLabels:
+      {{- include "wazuh.manager.master.selectorLabels" . | nindent 6 }}
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        {{- include "wazuh.manager.master.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secrets/secrets.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "wazuh.serviceAccountName" . }}
+      {{- with .Values.wazuhManager.master.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: wazuh-manager-master-conf
+        - name: filebeat-certs
+          secret:
+            secretName: indexer-certs
+        - name: wazuh-authd-pass
+          secret:
+            secretName: wazuh-authd-pass
+      containers:
+        - name: wazuh-manager
+          image: "{{ .Values.wazuhManager.master.image.repository }}:{{ .Values.wazuhManager.master.image.tag }}"
+          imagePullPolicy: {{ .Values.wazuhManager.master.image.pullPolicy }}
+          ports:
+            - name: registration
+              containerPort: 1515
+              protocol: TCP
+            - name: cluster
+              containerPort: 1516
+              protocol: TCP
+            - name: api
+              containerPort: 55000
+              protocol: TCP
+          env:
+            - name: INDEXER_URL
+              value: "https://wazuh-indexer-0.wazuh-indexer:9200"
+            - name: INDEXER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: indexer-cred
+                  key: username
+            - name: INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: indexer-cred
+                  key: password
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: "full"
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: "/etc/ssl/root-ca.pem"
+            - name: SSL_CERTIFICATE
+              value: "/etc/ssl/filebeat.pem"
+            - name: SSL_KEY
+              value: "/etc/ssl/filebeat-key.pem"
+            - name: API_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-api-cred
+                  key: username
+            - name: API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-api-cred
+                  key: password
+            - name: WAZUH_CLUSTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-cluster-key
+                  key: cluster_key
+          volumeMounts:
+            - name: config
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
+            - name: filebeat-certs
+              mountPath: /etc/ssl/root-ca.pem
+              subPath: root-ca.pem
+              readOnly: true
+            - name: filebeat-certs
+              mountPath: /etc/ssl/filebeat.pem
+              subPath: filebeat.pem
+              readOnly: true
+            - name: filebeat-certs
+              mountPath: /etc/ssl/filebeat-key.pem
+              subPath: filebeat-key.pem
+              readOnly: true
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/api/configuration
+              subPath: wazuh/var/ossec/api/configuration
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/etc
+              subPath: wazuh/var/ossec/etc
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/logs
+              subPath: wazuh/var/ossec/logs
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/queue
+              subPath: wazuh/var/ossec/queue
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/var/multigroups
+              subPath: wazuh/var/ossec/var/multigroups
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/integrations
+              subPath: wazuh/var/ossec/integrations
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/active-response/bin
+              subPath: wazuh/var/ossec/active-response/bin
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/agentless
+              subPath: wazuh/var/ossec/agentless
+            - name: wazuh-manager-master
+              mountPath: /var/ossec/wodles
+              subPath: wazuh/var/ossec/wodles
+            - name: wazuh-manager-master
+              mountPath: /etc/filebeat
+              subPath: filebeat/etc/filebeat
+            - name: wazuh-manager-master
+              mountPath: /var/lib/filebeat
+              subPath: filebeat/var/lib/filebeat
+            - name: wazuh-authd-pass
+              mountPath: /wazuh-config-mount/etc/authd.pass
+              subPath: authd.pass
+              readOnly: true
+          {{- with .Values.wazuhManager.master.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /var/ossec/bin/wazuh-control status | grep -q "wazuh-modulesd is running"
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /var/ossec/bin/wazuh-control status | grep -q "wazuh-modulesd is running"
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      {{- with .Values.wazuhManager.master.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.wazuhManager.master.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.wazuhManager.master.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.wazuhManager.master.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: wazuh-manager-master
+        labels:
+          {{- include "wazuh.manager.master.labels" . | nindent 10 }}
+        {{- with .Values.wazuhManager.master.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.wazuhManager.master.persistence.accessModes | nindent 10 }}
+        {{- if .Values.wazuhManager.master.persistence.storageClass }}
+        storageClassName: {{ .Values.wazuhManager.master.persistence.storageClass }}
+        {{- else if .Values.global.storageClass }}
+        storageClassName: {{ .Values.global.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.wazuhManager.master.persistence.size }}
+  {{- end }}
+{{- end }}

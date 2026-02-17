@@ -1,0 +1,15 @@
+{{- if .Values.global.storageClass }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.global.storageClass }}
+  labels:
+    {{- include "wazuh.labels" . | nindent 4 }}
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+  fsType: ext4
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+{{- end }}

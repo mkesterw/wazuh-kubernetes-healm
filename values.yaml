@@ -1,0 +1,343 @@
+# Default values for wazuh helm chart
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  # Namespace where Wazuh will be deployed
+  namespace: wazuh
+  
+  # Storage class for persistent volumes
+  storageClass: gp2
+  
+  # Image pull secrets if using private registry
+  imagePullSecrets: []
+  # - name: myregistrykey
+
+# Wazuh Manager configuration
+wazuhManager:
+  # Enable/disable Wazuh Manager deployment
+  enabled: true
+  
+  # Master node configuration
+  master:
+    # Number of master replicas (only 1 master is supported)
+    replicas: 1
+    
+    # Image configuration
+    image:
+      repository: wazuh/wazuh-manager
+      tag: 4.14.1
+      pullPolicy: IfNotPresent
+    
+    # Resource limits and requests
+    resources:
+      limits:
+        cpu: 400m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    
+    # Persistent volume configuration
+    persistence:
+      enabled: true
+      storageClass: ""  # Uses global.storageClass if empty
+      accessModes:
+        - ReadWriteOnce
+      size: 500Mi
+      annotations: {}
+    
+    # Service configuration
+    service:
+      type: LoadBalancer
+      annotations: {}
+      # For EKS, you can add:
+      # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      # service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+      
+      # Ports configuration
+      ports:
+        registration: 1515
+        cluster: 1516
+        api: 55000
+        events: 1514
+    
+    # Node selector, tolerations and affinity
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    
+    # Security context
+    securityContext:
+      fsGroup: 1000
+  
+  # Worker nodes configuration
+  worker:
+    # Enable/disable worker nodes
+    enabled: true
+    
+    # Number of worker replicas
+    replicas: 2
+    
+    # Image configuration
+    image:
+      repository: wazuh/wazuh-manager
+      tag: 4.14.1
+      pullPolicy: IfNotPresent
+    
+    # Resource limits and requests
+    resources:
+      limits:
+        cpu: 400m
+        memory: 512Mi
+      requests:
+        cpu: 200m
+        memory: 256Mi
+    
+    # Persistent volume configuration
+    persistence:
+      enabled: true
+      storageClass: ""
+      accessModes:
+        - ReadWriteOnce
+      size: 500Mi
+      annotations: {}
+    
+    # Service configuration
+    service:
+      type: LoadBalancer
+      annotations: {}
+      ports:
+        events: 1514
+    
+    # Node selector, tolerations and affinity
+    nodeSelector: {}
+    tolerations: []
+    
+    # Anti-affinity to spread workers across nodes
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - wazuh-manager
+                  - key: node-type
+                    operator: In
+                    values:
+                      - worker
+              topologyKey: kubernetes.io/hostname
+    
+    # Security context
+    securityContext:
+      fsGroup: 1000
+
+# Wazuh Indexer (OpenSearch) configuration
+wazuhIndexer:
+  # Enable/disable Wazuh Indexer deployment
+  enabled: true
+  
+  # Number of indexer replicas
+  replicas: 3
+  
+  # Image configuration
+  image:
+    repository: wazuh/wazuh-indexer
+    tag: 4.14.1
+    pullPolicy: IfNotPresent
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1468Mi
+    requests:
+      cpu: 250m
+      memory: 1468Mi
+  
+  # Persistent volume configuration
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessModes:
+      - ReadWriteOnce
+    size: 500Mi
+    annotations: {}
+  
+  # Service configuration
+  service:
+    type: ClusterIP
+    port: 9200
+    annotations: {}
+  
+  # OpenSearch configuration
+  opensearchConfig:
+    # JVM heap size (should be 50% of memory limit)
+    javaOpts: "-Xms734m -Xmx734m"
+    
+    # Cluster settings
+    clusterName: wazuh-cluster
+    networkHost: "0.0.0.0"
+    
+    # Discovery settings
+    discoveryType: zen
+    minimumMasterNodes: 2
+    
+  # Node selector, tolerations and affinity
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  # Security context
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+
+# Wazuh Dashboard configuration
+wazuhDashboard:
+  # Enable/disable Wazuh Dashboard deployment
+  enabled: true
+  
+  # Number of dashboard replicas
+  replicas: 1
+  
+  # Image configuration
+  image:
+    repository: wazuh/wazuh-dashboard
+    tag: 4.14.1
+    pullPolicy: IfNotPresent
+  
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 768Mi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  
+  # Service configuration
+  service:
+    type: LoadBalancer
+    port: 443
+    targetPort: 5601
+    annotations: {}
+    # For AWS EKS:
+    # service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    # service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:..."
+  
+  # Ingress configuration
+  ingress:
+    enabled: false
+    className: nginx
+    annotations: {}
+      # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+      # nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+    hosts:
+      - host: wazuh.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+    # - secretName: wazuh-tls
+    #   hosts:
+    #     - wazuh.example.com
+  
+  # Node selector, tolerations and affinity
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  # Security context
+  securityContext:
+    fsGroup: 1000
+    runAsUser: 1000
+
+# Secrets configuration
+secrets:
+  # Wazuh API credentials
+  wazuhApi:
+    username: "wazuh-wui"
+    # Base64 encoded password (default: wazuh)
+    password: "d2F6dWg="
+  
+  # Wazuh authd password for agent enrollment
+  wazuhAuthd:
+    # Base64 encoded password (default: password)
+    password: "cGFzc3dvcmQ="
+  
+  # Wazuh cluster key for inter-node communication
+  wazuhCluster:
+    # Base64 encoded key (32 characters recommended)
+    key: "YzM0OGUzZTJmNTZlNGY0MmE1YzQyZjE1Yjg3YTFiNzU="
+  
+  # Dashboard credentials
+  dashboard:
+    username: "kibanaserver"
+    # Base64 encoded password (default: kibanaserver)
+    password: "a2liYW5hc2VydmVy"
+  
+  # Indexer credentials
+  indexer:
+    username: "admin"
+    # Base64 encoded password (default: SecretPassword)
+    password: "U2VjcmV0UGFzc3dvcmQ="
+
+# TLS/SSL Certificates configuration
+certificates:
+  # Enable automatic certificate generation
+  generate: true
+  
+  # If generate is false, provide existing certificates
+  # Place your certificates in the certs/ directory
+  existingSecrets:
+    indexer:
+      caSecret: ""
+      certSecret: ""
+    dashboard:
+      caSecret: ""
+      certSecret: ""
+
+# ServiceAccount configuration
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# RBAC configuration
+rbac:
+  create: true
+
+# Network policies
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Monitoring and observability
+monitoring:
+  # Enable Prometheus ServiceMonitor
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+  
+  # Enable PodMonitor
+  podMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+    labels: {}
+
+# Additional labels to apply to all resources
+commonLabels: {}
+
+# Additional annotations to apply to all resources
+commonAnnotations: {}

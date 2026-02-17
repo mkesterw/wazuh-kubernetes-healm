@@ -1,0 +1,75 @@
+{{- if .Values.wazuhDashboard.enabled }}
+---
+# Dashboard Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-dashboard
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.dashboard.labels" . | nindent 4 }}
+  {{- with .Values.wazuhDashboard.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.wazuhDashboard.service.type }}
+  selector:
+    {{- include "wazuh.dashboard.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: dashboard
+      port: {{ .Values.wazuhDashboard.service.port }}
+      targetPort: {{ .Values.wazuhDashboard.service.targetPort }}
+      protocol: TCP
+---
+# Dashboard Ingress (optional)
+{{- if .Values.wazuhDashboard.ingress.enabled }}
+apiVersion: {{ include "wazuh.ingress.apiVersion" . }}
+kind: Ingress
+metadata:
+  name: wazuh-dashboard-ingress
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.dashboard.labels" . | nindent 4 }}
+  {{- with .Values.wazuhDashboard.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.wazuhDashboard.ingress.className }}
+  ingressClassName: {{ .Values.wazuhDashboard.ingress.className }}
+  {{- end }}
+  {{- if .Values.wazuhDashboard.ingress.tls }}
+  tls:
+    {{- range .Values.wazuhDashboard.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.wazuhDashboard.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+            pathType: {{ .pathType }}
+            {{- end }}
+            backend:
+              {{- if semverCompare ">=1.19-0" $.Capabilities.KubeVersion.GitVersion }}
+              service:
+                name: wazuh-dashboard
+                port:
+                  number: {{ $.Values.wazuhDashboard.service.port }}
+              {{- else }}
+              serviceName: wazuh-dashboard
+              servicePort: {{ $.Values.wazuhDashboard.service.port }}
+              {{- end }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}

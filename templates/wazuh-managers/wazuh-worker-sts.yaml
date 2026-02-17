@@ -1,0 +1,181 @@
+{{- if and .Values.wazuhManager.enabled .Values.wazuhManager.worker.enabled }}
+apiVersion: {{ include "wazuh.statefulset.apiVersion" . }}
+kind: StatefulSet
+metadata:
+  name: wazuh-manager-worker
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.manager.worker.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.wazuhManager.worker.replicas }}
+  serviceName: wazuh-cluster
+  selector:
+    matchLabels:
+      {{- include "wazuh.manager.worker.selectorLabels" . | nindent 6 }}
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        {{- include "wazuh.manager.worker.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secrets/secrets.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "wazuh.serviceAccountName" . }}
+      {{- with .Values.wazuhManager.worker.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: wazuh-manager-worker-conf
+        - name: filebeat-certs
+          secret:
+            secretName: indexer-certs
+      containers:
+        - name: wazuh-manager
+          image: "{{ .Values.wazuhManager.worker.image.repository }}:{{ .Values.wazuhManager.worker.image.tag }}"
+          imagePullPolicy: {{ .Values.wazuhManager.worker.image.pullPolicy }}
+          ports:
+            - name: agents-events
+              containerPort: 1514
+              protocol: TCP
+          env:
+            - name: INDEXER_URL
+              value: "https://wazuh-indexer-0.wazuh-indexer:9200"
+            - name: INDEXER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: indexer-cred
+                  key: username
+            - name: INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: indexer-cred
+                  key: password
+            - name: FILEBEAT_SSL_VERIFICATION_MODE
+              value: "full"
+            - name: SSL_CERTIFICATE_AUTHORITIES
+              value: "/etc/ssl/root-ca.pem"
+            - name: SSL_CERTIFICATE
+              value: "/etc/ssl/filebeat.pem"
+            - name: SSL_KEY
+              value: "/etc/ssl/filebeat-key.pem"
+            - name: WAZUH_CLUSTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-cluster-key
+                  key: cluster_key
+          volumeMounts:
+            - name: config
+              mountPath: /wazuh-config-mount/etc/ossec.conf
+              subPath: ossec.conf
+              readOnly: true
+            - name: filebeat-certs
+              mountPath: /etc/ssl/root-ca.pem
+              subPath: root-ca.pem
+              readOnly: true
+            - name: filebeat-certs
+              mountPath: /etc/ssl/filebeat.pem
+              subPath: filebeat.pem
+              readOnly: true
+            - name: filebeat-certs
+              mountPath: /etc/ssl/filebeat-key.pem
+              subPath: filebeat-key.pem
+              readOnly: true
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/api/configuration
+              subPath: wazuh/var/ossec/api/configuration
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/etc
+              subPath: wazuh/var/ossec/etc
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/logs
+              subPath: wazuh/var/ossec/logs
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/queue
+              subPath: wazuh/var/ossec/queue
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/var/multigroups
+              subPath: wazuh/var/ossec/var/multigroups
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/integrations
+              subPath: wazuh/var/ossec/integrations
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/active-response/bin
+              subPath: wazuh/var/ossec/active-response/bin
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/agentless
+              subPath: wazuh/var/ossec/agentless
+            - name: wazuh-manager-worker
+              mountPath: /var/ossec/wodles
+              subPath: wazuh/var/ossec/wodles
+            - name: wazuh-manager-worker
+              mountPath: /etc/filebeat
+              subPath: filebeat/etc/filebeat
+            - name: wazuh-manager-worker
+              mountPath: /var/lib/filebeat
+              subPath: filebeat/var/lib/filebeat
+          {{- with .Values.wazuhManager.worker.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /var/ossec/bin/wazuh-control status | grep -q "wazuh-modulesd is running"
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - /var/ossec/bin/wazuh-control status | grep -q "wazuh-modulesd is running"
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      {{- with .Values.wazuhManager.worker.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.wazuhManager.worker.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.wazuhManager.worker.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  {{- if .Values.wazuhManager.worker.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: wazuh-manager-worker
+        labels:
+          {{- include "wazuh.manager.worker.labels" . | nindent 10 }}
+        {{- with .Values.wazuhManager.worker.persistence.annotations }}
+        annotations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+      spec:
+        accessModes:
+          {{- toYaml .Values.wazuhManager.worker.persistence.accessModes | nindent 10 }}
+        {{- if .Values.wazuhManager.worker.persistence.storageClass }}
+        storageClassName: {{ .Values.wazuhManager.worker.persistence.storageClass }}
+        {{- else if .Values.global.storageClass }}
+        storageClassName: {{ .Values.global.storageClass }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.wazuhManager.worker.persistence.size }}
+  {{- end }}
+{{- end }}

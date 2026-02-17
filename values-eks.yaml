@@ -1,0 +1,86 @@
+# Example values for AWS EKS deployment
+# Save as: values-eks.yaml
+
+global:
+  namespace: wazuh
+  storageClass: gp2
+
+wazuhManager:
+  master:
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    resources:
+      limits:
+        cpu: 800m
+        memory: 1Gi
+      requests:
+        cpu: 400m
+        memory: 512Mi
+  
+  worker:
+    replicas: 3
+    service:
+      type: LoadBalancer
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+        service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+    resources:
+      limits:
+        cpu: 800m
+        memory: 1Gi
+      requests:
+        cpu: 400m
+        memory: 512Mi
+
+wazuhIndexer:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 2Gi
+  opensearchConfig:
+    javaOpts: "-Xms1g -Xmx1g"
+  persistence:
+    size: 50Gi
+
+wazuhDashboard:
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/cert-id"
+      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "https"
+  ingress:
+    enabled: true
+    className: alb
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:region:account:certificate/cert-id"
+    hosts:
+      - host: wazuh.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+
+# Remember to change default passwords!
+secrets:
+  wazuhApi:
+    username: "wazuh-wui"
+    password: "<your-base64-encoded-password>"
+  wazuhAuthd:
+    password: "<your-base64-encoded-password>"
+  wazuhCluster:
+    key: "<your-base64-encoded-cluster-key>"
+  dashboard:
+    username: "kibanaserver"
+    password: "<your-base64-encoded-password>"
+  indexer:
+    username: "admin"
+    password: "<your-base64-encoded-password>"

@@ -1,0 +1,83 @@
+{{- if .Values.wazuhManager.enabled }}
+---
+# Cluster internal service
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-cluster
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.manager.master.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "wazuh.manager.master.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: registration
+      port: 1515
+      targetPort: 1515
+      protocol: TCP
+    - name: cluster
+      port: 1516
+      targetPort: 1516
+      protocol: TCP
+    - name: api
+      port: 55000
+      targetPort: 55000
+      protocol: TCP
+---
+# Master node external service
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-master-svc
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.manager.master.labels" . | nindent 4 }}
+  {{- with .Values.wazuhManager.master.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.wazuhManager.master.service.type }}
+  selector:
+    {{- include "wazuh.manager.master.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: registration
+      port: {{ .Values.wazuhManager.master.service.ports.registration }}
+      targetPort: 1515
+      protocol: TCP
+    - name: cluster
+      port: {{ .Values.wazuhManager.master.service.ports.cluster }}
+      targetPort: 1516
+      protocol: TCP
+    - name: api
+      port: {{ .Values.wazuhManager.master.service.ports.api }}
+      targetPort: 55000
+      protocol: TCP
+---
+# Workers external service
+{{- if .Values.wazuhManager.worker.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: wazuh-workers-svc
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.manager.worker.labels" . | nindent 4 }}
+  {{- with .Values.wazuhManager.worker.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.wazuhManager.worker.service.type }}
+  selector:
+    {{- include "wazuh.manager.worker.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: events
+      port: {{ .Values.wazuhManager.worker.service.ports.events }}
+      targetPort: 1514
+      protocol: TCP
+{{- end }}
+{{- end }}

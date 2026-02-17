@@ -1,0 +1,137 @@
+{{- if .Values.wazuhDashboard.enabled }}
+apiVersion: {{ include "wazuh.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: wazuh-dashboard
+  namespace: {{ include "wazuh.namespace" . }}
+  labels:
+    {{- include "wazuh.dashboard.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.wazuhDashboard.replicas }}
+  selector:
+    matchLabels:
+      {{- include "wazuh.dashboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wazuh.dashboard.labels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/secrets/secrets.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "wazuh.serviceAccountName" . }}
+      {{- with .Values.wazuhDashboard.securityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: dashboard-certs
+          secret:
+            secretName: dashboard-certs
+        - name: dashboard-conf
+          configMap:
+            name: dashboard-conf
+      containers:
+        - name: wazuh-dashboard
+          image: "{{ .Values.wazuhDashboard.image.repository }}:{{ .Values.wazuhDashboard.image.tag }}"
+          imagePullPolicy: {{ .Values.wazuhDashboard.image.pullPolicy }}
+          ports:
+            - name: dashboard
+              containerPort: 5601
+              protocol: TCP
+          env:
+            - name: INDEXER_URL
+              value: "https://wazuh-indexer-0.wazuh-indexer:9200"
+            - name: INDEXER_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: indexer-cred
+                  key: username
+            - name: INDEXER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: indexer-cred
+                  key: password
+            - name: DASHBOARD_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-cred
+                  key: username
+            - name: DASHBOARD_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: dashboard-cred
+                  key: password
+            - name: SERVER_SSL_ENABLED
+              value: "true"
+            - name: SERVER_SSL_CERTIFICATE
+              value: "/usr/share/wazuh-dashboard/certs/cert.pem"
+            - name: SERVER_SSL_KEY
+              value: "/usr/share/wazuh-dashboard/certs/key.pem"
+            - name: WAZUH_API_URL
+              value: "https://wazuh-master-svc:55000"
+            - name: API_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-api-cred
+                  key: username
+            - name: API_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: wazuh-api-cred
+                  key: password
+          volumeMounts:
+            - name: dashboard-conf
+              mountPath: /usr/share/wazuh-dashboard/config/opensearch_dashboards.yml
+              subPath: opensearch_dashboards.yml
+              readOnly: true
+            - name: dashboard-certs
+              mountPath: /usr/share/wazuh-dashboard/certs/cert.pem
+              subPath: cert.pem
+              readOnly: true
+            - name: dashboard-certs
+              mountPath: /usr/share/wazuh-dashboard/certs/key.pem
+              subPath: key.pem
+              readOnly: true
+            - name: dashboard-certs
+              mountPath: /usr/share/wazuh-dashboard/certs/root-ca.pem
+              subPath: root-ca.pem
+              readOnly: true
+          {{- with .Values.wazuhDashboard.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 120
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+              scheme: HTTPS
+            initialDelaySeconds: 90
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+      {{- with .Values.wazuhDashboard.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.wazuhDashboard.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.wazuhDashboard.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
